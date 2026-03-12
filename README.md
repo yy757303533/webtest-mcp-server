@@ -56,3 +56,17 @@ PYTHONPATH=src pytest tests/ -v
 - **Linux**：支持
 
 首次使用需执行 `playwright install chromium`，Playwright 会自动下载对应平台浏览器。
+
+## Docker
+
+```bash
+docker build -t webtest-mcp-server .
+docker run --rm webtest-mcp-server
+```
+
+## Jenkins
+
+项目包含 `Jenkinsfile`，可在 Jenkins 中创建 Pipeline 任务并指向本仓库。
+
+- **Unit Tests**：无需浏览器
+- **Integration Tests**：需设置环境变量 `WEBTEST_RUN_INTEGRATION=1` 且 Jenkins Agent 具备 Playwright 依赖
