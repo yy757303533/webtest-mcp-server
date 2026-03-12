@@ -1,0 +1,6 @@
+# 语义 key -> locator 映射
+# 支持多个候选，取第一个
+# login.username: "input[name=username]"
+# login.password: "input[name=password]"
+# login.submit: "button:has-text('登录')"
+# nav.home: "a:has-text('首页')"

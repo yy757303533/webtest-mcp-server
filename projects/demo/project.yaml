@@ -1,0 +1,11 @@
+# demo 项目配置
+base_url: "https://example.com"
+
+# 可选：登录配置（不配置则跳过登录）
+# login:
+#   url: "https://example.com/login"
+#   username: "login.username"
+#   password: "login.password"
+#   submit: "login.submit"
+#   account: "admin"
+#   password_value: "your-password"
