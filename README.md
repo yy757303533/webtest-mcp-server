@@ -57,11 +57,46 @@ PYTHONPATH=src pytest tests/ -v
 
 首次使用需执行 `playwright install chromium`，Playwright 会自动下载对应平台浏览器。
 
-## Docker
+## 快速测试（登录用例）
+
+项目自带 `projects/demo/login_cases.xlsx`，使用 [the-internet.herokuapp.com](https://the-internet.herokuapp.com/login) 公开登录页。
 
 ```bash
+cd webtest-mcp-server
+pip install -e .
+playwright install chromium
+
+# 运行登录用例
+PYTHONPATH=src python scripts/run_demo.py
+```
+
+或直接用 Python 调用：
+
+```bash
+cd webtest-mcp-server
+PYTHONPATH=src python -c "
+import asyncio
+from pathlib import Path
+from webtest_mcp.loader import load_excel
+from webtest_mcp.runner import run_cases
+
+cases = load_excel('projects/demo/login_cases.xlsx')
+r, s = asyncio.run(run_cases('demo', cases, base_url_override='https://the-internet.herokuapp.com'))
+print(s)
+"
+```
+
+## Docker（macOS / Linux）
+
+```bash
+# 构建
 docker build -t webtest-mcp-server .
+
+# 运行 MCP 服务
 docker run --rm webtest-mcp-server
+
+# 运行登录用例测试
+docker run --rm webtest-mcp-server run-test
 ```
 
 ## Jenkins
