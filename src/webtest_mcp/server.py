@@ -5,12 +5,11 @@ webtest-mcp-server - MCP 入口
 - list_projects: 列出可用项目
 - validate_suite: 预检验证
 - run_excel_suite: 执行 Excel 用例
+- extract_page_elements: 页面爬取生成 selectors 候选
 """
 
-import argparse
 import asyncio
 import json
-import os
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
@@ -18,6 +17,7 @@ from typing import Any, Optional
 from mcp.server.fastmcp import FastMCP
 
 from .config import get_projects_dir, list_projects, load_project_config
+from .crawler import extract_elements, merge_into_selectors
 from .loader import filter_cases_by_tags, load_excel
 from .runner import run_cases
 from .validator import validate_suite
@@ -36,10 +36,12 @@ def _get_excel_path(project_key: str, excel_path: str) -> Path:
 
 
 @mcp.tool()
-async def list_projects_tool() -> str:
+async def list_projects_tool(include_details: Optional[bool] = True) -> str:
     """
     列出所有已配置的 Web 测试项目
-    Returns: JSON 格式的项目列表
+    Args:
+        _include_dir: 是否包含 projects_dir，默认 True（可选，调用时可不传）
+    Returns: JSON 格式的项目列表（含 projects、projects_dir）
     """
     projects = list_projects()
     projects_dir = get_projects_dir()
@@ -156,6 +158,64 @@ async def run_excel_suite(
         )
 
 
+@mcp.tool()
+async def extract_page_elements(
+    project: str,
+    url: str,
+    merge: bool = False,
+    merge_mode: str = "append",
+    verify: bool = False,
+    excel_path: Optional[str] = None,
+) -> str:
+    """
+    从页面提取可交互元素，生成 selectors 候选
+    Args:
+        project: 项目 key
+        url: 要爬取的页面 URL
+        merge: 是否合并到项目的 selectors.yaml
+        merge_mode: append=追加已有, overwrite=全量覆盖
+        verify: 合并后是否运行 validate_suite 验证
+        excel_path: 验证时使用的 Excel，如 login_cases.xlsx
+    Returns: 提取结果 JSON
+    """
+    try:
+        if project not in list_projects():
+            return json.dumps(
+                {"success": False, "error": f"项目 {project} 不存在"},
+                ensure_ascii=False,
+                indent=2,
+            )
+        candidates = await extract_elements(url)
+        out = [
+            {"key": c.key, "locator": c.locator, "tag": c.tag, "hint": c.hint}
+            for c in candidates
+        ]
+        result: dict[str, Any] = {
+            "success": True,
+            "url": url,
+            "count": len(candidates),
+            "elements": out,
+        }
+        if merge:
+            path = merge_into_selectors(project, candidates, merge_mode)
+            result["merged_path"] = str(path)
+        if verify and excel_path:
+            full_path = _get_excel_path(project, excel_path)
+            val = validate_suite(project, full_path)
+            result["verify"] = val
+        return json.dumps(result, ensure_ascii=False, indent=2)
+    except Exception as e:
+        return json.dumps(
+            {"success": False, "error": str(e)},
+            ensure_ascii=False,
+            indent=2,
+        )
+
+
 def main() -> None:
     """MCP 入口"""
     mcp.run()
+
+
+if __name__ == "__main__":
+    main()

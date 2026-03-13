@@ -5,7 +5,7 @@
 ## 功能
 
 - **Excel 驱动**：用例写在 Excel，语义 target 映射到 selectors.yaml
-- **MCP 工具**：list_projects、validate_suite、run_excel_suite
+- **MCP 工具**：list_projects、validate_suite、run_excel_suite、extract_page_elements（页面爬取生成 selectors）
 - **报告**：Allure + result.json（供 AI/CI 消费）
 - **项目配置**：project.yaml（base_url、登录）、selectors.yaml
 
@@ -22,6 +22,7 @@ playwright install chromium
 - `project.yaml`：base_url、登录配置
 - `selectors.yaml`：语义 key → locator 映射
 - Excel 用例文件
+- `PLAYBOOK.md`（可选）：项目测试说明，供 AI 在多项目场景下理解该项目。建议包含：模块与 tags、用例文件说明、已知问题、测试数据要求等，便于 AI 正确选择项目、选用例、分析执行结果。示例见 `projects/demo/PLAYBOOK.md`。
 
 ## 使用
 
@@ -56,6 +57,8 @@ PYTHONPATH=src pytest tests/ -v
 - **Linux**：支持
 
 首次使用需执行 `playwright install chromium`，Playwright 会自动下载对应平台浏览器。
+
+**Windows 测试**：CMD 中设置 `set PYTHONPATH=src` 后执行脚本。详细步骤见 [docs/Phase1-Windows测试指南.md](docs/Phase1-Windows测试指南.md)。
 
 ## 快速测试（登录用例）
 
