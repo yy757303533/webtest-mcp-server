@@ -1,27 +1,35 @@
 #!/usr/bin/env python3
-"""冒烟测试 - 使用 data: URL，无需外网，验证流水线可用"""
+"""冒烟测试 - 使用 data: URL，无需外网，可指定项目"""
 
-import asyncio
+import os
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+
+# 支持指定项目，默认 demo
+project = os.environ.get("WEBTEST_PROJECT") or (sys.argv[1] if len(sys.argv) > 1 else "demo")
 
 from webtest_mcp.loader import load_excel
 from webtest_mcp.runner import run_cases
 
 
 def main():
-    excel_path = Path(__file__).resolve().parent.parent / "projects" / "demo" / "smoke_cases.xlsx"
+    root = Path(__file__).resolve().parent.parent
+    excel_path = root / "projects" / project / "smoke_cases.xlsx"
+    if not excel_path.exists():
+        print(f"错误: 项目 '{project}' 下不存在 smoke_cases.xlsx")
+        sys.exit(1)
     cases = load_excel(excel_path)
-    print(f"加载 {len(cases)} 个用例（无需外网）: {[c.case_id for c in cases]}")
+    print(f"项目: {project}, 加载 {len(cases)} 个用例（无需外网）: {[c.case_id for c in cases]}")
 
+    import asyncio
     results, summary = asyncio.run(run_cases(
-        project_key="demo",
+        project_key=project,
         cases=cases,
         base_url_override="about:blank",
         headless=True,
-        artifacts_dir=Path("artifacts") / "demo",
+        artifacts_dir=root / "artifacts" / project,
     ))
 
     print("\n=== 执行结果 ===")

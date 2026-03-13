@@ -1,5 +1,5 @@
-# demo 项目配置
-base_url: "https://example.com"
+# demo 项目配置（登录用例使用 the-internet）
+base_url: "https://the-internet.herokuapp.com"
 
 # 可选：登录配置（不配置则跳过登录）
 # login:

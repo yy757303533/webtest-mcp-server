@@ -95,11 +95,17 @@ docker build -t webtest-mcp-server .
 # 运行 MCP 服务
 docker run --rm webtest-mcp-server
 
-# 冒烟测试（无需外网，验证流水线）
+# 冒烟测试（无需外网，默认 demo 项目）
 docker run --rm webtest-mcp-server run-smoke
+docker run --rm webtest-mcp-server run-smoke mycompany   # 指定项目
 
-# 登录用例（需访问 the-internet.herokuapp.com）
+# 执行用例（默认 demo 的 login_cases.xlsx）
 docker run --rm webtest-mcp-server run-test
+docker run --rm webtest-mcp-server run-test mycompany   # 指定项目
+docker run --rm webtest-mcp-server run-test mycompany cases.xlsx  # 指定项目和 Excel
+
+# 环境变量
+# WEBTEST_PROJECT=mycompany  WEBTEST_EXCEL=login.xlsx  WEBTEST_BASE_URL=https://...
 
 # 若需走代理
 docker run --rm -e https_proxy=http://proxy:port webtest-mcp-server run-test
