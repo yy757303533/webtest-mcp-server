@@ -97,6 +97,9 @@ docker run --rm webtest-mcp-server
 
 # 运行登录用例测试
 docker run --rm webtest-mcp-server run-test
+
+# 若需走代理（如公司网络）
+docker run --rm -e https_proxy=http://proxy:port -e http_proxy=http://proxy:port webtest-mcp-server run-test
 ```
 
 ## Jenkins

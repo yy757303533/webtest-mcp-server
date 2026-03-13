@@ -124,7 +124,9 @@ async def _run_step(
     artifacts_dir: Path,
 ) -> tuple[StepResult, bool]:
     """执行单步，返回 (StepResult, 是否应停止后续步骤)"""
-    timeout_ms = step.timeout_ms or 10000
+    # go 导航默认 30s，其他操作 10s（外网/代理环境下 page load 可能较慢）
+    default_timeout = 30000 if step.action == "go" else 10000
+    timeout_ms = step.timeout_ms if step.timeout_ms is not None else default_timeout
 
     async def _screenshot_async() -> Optional[str]:
         try:
