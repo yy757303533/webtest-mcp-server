@@ -95,11 +95,14 @@ docker build -t webtest-mcp-server .
 # 运行 MCP 服务
 docker run --rm webtest-mcp-server
 
-# 运行登录用例测试
+# 冒烟测试（无需外网，验证流水线）
+docker run --rm webtest-mcp-server run-smoke
+
+# 登录用例（需访问 the-internet.herokuapp.com）
 docker run --rm webtest-mcp-server run-test
 
-# 若需走代理（如公司网络）
-docker run --rm -e https_proxy=http://proxy:port -e http_proxy=http://proxy:port webtest-mcp-server run-test
+# 若需走代理
+docker run --rm -e https_proxy=http://proxy:port webtest-mcp-server run-test
 ```
 
 ## Jenkins
