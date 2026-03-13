@@ -144,7 +144,7 @@ async def _run_step(
 
         if step.action == "go":
             url = step.value or step.target
-            if url and not url.startswith("http"):
+            if url and not url.startswith("http") and not url.startswith("data:"):
                 url = f"{base_url.rstrip('/')}/{url.lstrip('/')}"
             await page.goto(url or base_url, timeout=timeout_ms)
             return StepResult(step, True), False
