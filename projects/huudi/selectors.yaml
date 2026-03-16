@@ -1,0 +1,4 @@
+# 语义 key -> locator 映射（huudi 项目）
+# 初始可以直接在 Excel 中写原始 locator，如 css/xpath/text
+# 后续可使用 Phase 2 的 extract_page_elements 自动生成
+
