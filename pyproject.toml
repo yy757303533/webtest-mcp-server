@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "webtest-mcp-server"
 version = "0.1.0"
-description = "MCP Server for Web UI automation - run Excel test cases via Playwright, AI-triggered"
+description = "MCP Server - 读取 Excel 自然语言用例，供 AI + playwright-mcp 执行"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"
@@ -16,6 +16,9 @@ classifiers = [
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
@@ -23,12 +26,9 @@ classifiers = [
 ]
 dependencies = [
     "mcp[cli]>=1.0.0",
-    "playwright>=1.40.0",
     "openpyxl>=3.1.0",
     "pyyaml>=6.0",
-    "allure-pytest>=2.13.0",
     "pytest>=7.0.0",
-    "pytest-asyncio>=0.21.0",
 ]
 
 [project.optional-dependencies]
@@ -46,6 +46,5 @@ packages = ["src/webtest_mcp"]
 packages = ["src/webtest_mcp"]
 
 [tool.pytest.ini_options]
-asyncio_mode = "auto"
 testpaths = ["tests"]
 pythonpath = ["src"]

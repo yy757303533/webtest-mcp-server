@@ -1,122 +1,104 @@
 # webtest-mcp-server
 
-让 AI 根据 Excel 手工用例执行 Web UI 自动化测试的 MCP Server。
+读取 Excel 中的自然语言手工测试用例，供 AI Agent 配合 [@playwright/mcp](https://github.com/microsoft/playwright-mcp) 执行。
 
 ## 功能
 
-- **Excel 驱动**：用例写在 Excel，语义 target 映射到 selectors.yaml
-- **MCP 工具**：list_projects、validate_suite、run_excel_suite、extract_page_elements（页面爬取生成 selectors）
-- **报告**：Allure + result.json（供 AI/CI 消费）
-- **项目配置**：project.yaml（base_url、登录）、selectors.yaml
+- **list_projects_tool**：列出已配置项目
+- **get_excel_cases**：读取 Excel 自然语言用例，返回供 AI 消费的 JSON
+- **save_test_results**：保存执行结果到 `artifacts/<project>/result.json` 和 `report.md`
+
+执行由 AI + playwright-mcp 完成；AI 执行完成后调用 save_test_results 持久化结果。
 
 ## 安装
 
 ```bash
 pip install -e .
-playwright install chromium
 ```
 
-## 配置
+## 项目配置
 
 在 `projects/<project_key>/` 下创建：
-- `project.yaml`：base_url、登录配置
-- `selectors.yaml`：语义 key → locator 映射
-- Excel 用例文件
-- `PLAYBOOK.md`（可选）：项目测试说明，供 AI 在多项目场景下理解该项目。建议包含：模块与 tags、用例文件说明、已知问题、测试数据要求等，便于 AI 正确选择项目、选用例、分析执行结果。示例见 `projects/demo/PLAYBOOK.md`。
+
+- **project.yaml**：`base_url` 等
+- Excel 用例文件（支持「步骤描述」「期望结果」或「action」「target」「value」列）
+
+### Excel 格式
+
+**自然语言格式**（推荐）：
+
+| 用例ID | 标题 | 步骤描述 | 期望结果 |
+|--------|------|----------|----------|
+| TC001 | 登录 | 输入 admin，密码 123456，点击登录 | 跳转首页 |
+| TC002 | 登录失败 | 输入错误密码，点击登录 | 提示密码错误 |
+
+**结构化格式**（兼容）：
+
+| 用例ID | 标题 | action | target | value |
+|--------|------|--------|--------|-------|
+| TC001 | 登录 | fill | 用户名 | admin |
+| TC001 | 登录 | click | 登录按钮 | |
 
 ## 使用
 
-```bash
-# MCP 服务
-webtest-mcp
+### 1. 启动 MCP 服务
 
+```bash
+webtest-mcp
 # 或
 python -m webtest_mcp.server
 ```
 
-## 开发与验证
+### 2. 配置双 MCP（Cursor / Claude Code）
+
+需同时配置 **webtest-mcp** 和 **playwright-mcp**：
+
+| MCP | 职责 | 配置 |
+|-----|------|------|
+| webtest-mcp | 读取 Excel 用例 | 本服务 `webtest-mcp` |
+| playwright-mcp | 操作浏览器 | `npx @playwright/mcp@latest` |
+
+**Cursor**：Settings → MCP → Add new MCP Server
+
+- webtest-mcp：Command 填 `webtest-mcp`（需已 `pip install -e .`）或 `python -m webtest_mcp.server`
+- playwright：Command 填 `npx`，Args 填 `@playwright/mcp@latest`
+
+### 3. Skill（Phase 2）
+
+项目已包含 **web-test-runner** Skill：
+
+- Cursor：`.cursor/skills/web-test-runner/SKILL.md`
+- Claude Code：`.claude/skills/web-test-runner/SKILL.md`
+
+当用户说「执行 demo 的登录用例」「跑 Excel 测试」时，AI 会命中 Skill，按流程执行：
+
+1. 调用 `get_excel_cases` 获取用例
+2. 调用 playwright-mcp 的 browser_navigate、browser_snapshot、browser_click、browser_type 等操作
+3. 汇总 PASS/FAIL 报告
+
+## 本地验证
+
+```bash
+# 创建示例 Excel
+python scripts/create_demo_excel.py
+
+# 列出用例
+python scripts/list_cases.py demo cases.xlsx
+```
+
+**PYTHONPATH**：Windows CMD `set PYTHONPATH=src`；PowerShell `$env:PYTHONPATH="src"`；macOS/Linux `export PYTHONPATH=src`。  
+完整测试步骤见 [docs/TESTING.md](docs/TESTING.md)。项目支持 **Windows、macOS、Linux**。
+
+## 测试
 
 ```bash
 pip install -e ".[dev]"
-playwright install chromium
-
-# 单元测试（不需要浏览器）
-PYTHONPATH=src pytest tests/test_config.py tests/test_loader.py tests/test_validator.py -v
-
-# Runner 集成测试（需 WEBTEST_RUN_INTEGRATION=1，且系统有 Playwright 依赖如 libgbm）
-WEBTEST_RUN_INTEGRATION=1 PYTHONPATH=src pytest tests/test_runner.py -v
-
-# 全量测试
 PYTHONPATH=src pytest tests/ -v
 ```
 
-## 平台支持
-
-- **Windows**：支持。截图文件名已做非法字符过滤（`: * ? " < > |` 等）
-- **macOS**：支持
-- **Linux**：支持
-
-首次使用需执行 `playwright install chromium`，Playwright 会自动下载对应平台浏览器。
-
-**Windows 测试**：CMD 中设置 `set PYTHONPATH=src` 后执行脚本。详细步骤见 [docs/Phase1-Windows测试指南.md](docs/Phase1-Windows测试指南.md)。
-
-## 快速测试（登录用例）
-
-项目自带 `projects/demo/login_cases.xlsx`，使用 [the-internet.herokuapp.com](https://the-internet.herokuapp.com/login) 公开登录页。
+## Docker
 
 ```bash
-cd webtest-mcp-server
-pip install -e .
-playwright install chromium
-
-# 运行登录用例
-PYTHONPATH=src python scripts/run_demo.py
-```
-
-或直接用 Python 调用：
-
-```bash
-cd webtest-mcp-server
-PYTHONPATH=src python -c "
-import asyncio
-from pathlib import Path
-from webtest_mcp.loader import load_excel
-from webtest_mcp.runner import run_cases
-
-cases = load_excel('projects/demo/login_cases.xlsx')
-r, s = asyncio.run(run_cases('demo', cases, base_url_override='https://the-internet.herokuapp.com'))
-print(s)
-"
-```
-
-## Docker（macOS / Linux）
-
-```bash
-# 构建
 docker build -t webtest-mcp-server .
-
-# 运行 MCP 服务
 docker run --rm webtest-mcp-server
-
-# 冒烟测试（无需外网，默认 demo 项目）
-docker run --rm webtest-mcp-server run-smoke
-docker run --rm webtest-mcp-server run-smoke mycompany   # 指定项目
-
-# 执行用例（默认 demo 的 login_cases.xlsx）
-docker run --rm webtest-mcp-server run-test
-docker run --rm webtest-mcp-server run-test mycompany   # 指定项目
-docker run --rm webtest-mcp-server run-test mycompany cases.xlsx  # 指定项目和 Excel
-
-# 环境变量
-# WEBTEST_PROJECT=mycompany  WEBTEST_EXCEL=login.xlsx  WEBTEST_BASE_URL=https://...
-
-# 若需走代理
-docker run --rm -e https_proxy=http://proxy:port webtest-mcp-server run-test
 ```
-
-## Jenkins
-
-项目包含 `Jenkinsfile`，可在 Jenkins 中创建 Pipeline 任务并指向本仓库。
-
-- **Unit Tests**：无需浏览器
-- **Integration Tests**：需设置环境变量 `WEBTEST_RUN_INTEGRATION=1` 且 Jenkins Agent 具备 Playwright 依赖
