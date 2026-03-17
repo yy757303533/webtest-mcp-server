@@ -14,12 +14,21 @@
 
 ### 1.2 安装项目
 
+**方式一：一键安装**（推荐，自动配置 Skill + MCP）
+
+| 平台 | 命令 |
+|------|------|
+| macOS / Linux | `cd webtest-mcp-server && sh install.sh` |
+| Windows PowerShell | `cd webtest-mcp-server; .\install.ps1` |
+
+**方式二：手动安装**
+
 ```bash
 cd webtest-mcp-server
 pip install -e .
 ```
 
-> 所有平台命令相同。
+> 手动安装后需自行配置 Cursor MCP 和 Skill，参见 README。
 
 ---
 

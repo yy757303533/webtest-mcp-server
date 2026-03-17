@@ -12,6 +12,18 @@
 
 ## 安装
 
+**一键安装**（Skill + MCP 全自动，无需手动配置）：
+
+| 平台 | 命令 |
+|------|------|
+| macOS / Linux | `sh install.sh` |
+| Windows (PowerShell) | `.\install.ps1` |
+
+安装脚本会：1）`pip install -e .` 2）复制 Skill 到 `~/.cursor/skills`、`~/.claude/skills` 3）将 webtest + playwright 合并到 `~/.cursor/mcp.json`、`~/.mcp.json`（不覆盖已有 MCP）4）创建项目级 `.cursor/mcp.json`。  
+**Skill 和 MCP 自动生效，无需手动配置。** 重启 Cursor/Claude Code 即可。
+
+**手动安装**：
+
 ```bash
 pip install -e .
 ```
@@ -51,17 +63,10 @@ python -m webtest_mcp.server
 
 ### 2. 配置双 MCP（Cursor / Claude Code）
 
-需同时配置 **webtest-mcp** 和 **playwright-mcp**：
+运行 `install.sh` 或 `install.ps1` 后，会自动创建 `.cursor/mcp.json`，包含 webtest-mcp 和 playwright-mcp。  
+在 Cursor 中打开本项目作为工作区即可加载。
 
-| MCP | 职责 | 配置 |
-|-----|------|------|
-| webtest-mcp | 读取 Excel 用例 | 本服务 `webtest-mcp` |
-| playwright-mcp | 操作浏览器 | `npx @playwright/mcp@latest` |
-
-**Cursor**：Settings → MCP → Add new MCP Server
-
-- webtest-mcp：Command 填 `webtest-mcp`（需已 `pip install -e .`）或 `python -m webtest_mcp.server`
-- playwright：Command 填 `npx`，Args 填 `@playwright/mcp@latest`
+**手动配置**：Settings → MCP → 添加 webtest（command: `webtest-mcp`）和 playwright（command: `npx`, args: `@playwright/mcp@latest`）
 
 ### 3. Skill（Phase 2）
 
