@@ -1,5 +1,6 @@
 """项目配置 - project.yaml"""
 
+import os
 from pathlib import Path
 from typing import Any
 
@@ -7,7 +8,10 @@ import yaml
 
 
 def get_projects_dir() -> Path:
-    """获取 projects 目录"""
+    """获取 projects 目录。可通过环境变量 WEBTEST_PROJECTS_DIR 覆盖。"""
+    env_dir = os.environ.get("WEBTEST_PROJECTS_DIR")
+    if env_dir and Path(env_dir).exists():
+        return Path(env_dir)
     current = Path(__file__).resolve().parent.parent.parent
     candidates = [
         current / "projects",

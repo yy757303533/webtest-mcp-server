@@ -101,6 +101,9 @@ pip install -e ".[dev]"
 PYTHONPATH=src pytest tests/ -v
 ```
 
+打包前可执行 `sh scripts/clean.sh` 清理 `__pycache__`。  
+项目路径可通过环境变量 `WEBTEST_PROJECTS_DIR` 覆盖。
+
 ## Docker
 
 ```bash

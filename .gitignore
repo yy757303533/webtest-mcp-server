@@ -21,3 +21,6 @@ htmlcov/
 
 # Artifacts
 artifacts/
+
+# MCP / Cursor（安装时生成，可不提交）
+.cursor/mcp.json

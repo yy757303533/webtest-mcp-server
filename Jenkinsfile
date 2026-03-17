@@ -22,7 +22,6 @@ pipeline {
                 sh '''
                     python3 --version || (echo "Python3 not found" && exit 1)
                     pip install -e ".[dev]" -q
-                    playwright install chromium
                 '''
             }
         }
