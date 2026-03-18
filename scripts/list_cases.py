@@ -33,7 +33,16 @@ def main():
             {
                 "case_id": c.case_id,
                 "title": c.title,
-                "steps": [{"step_no": s.step_no, "description": s.description, "expected": s.expected} for s in c.steps],
+                "module": c.module,
+                "precondition": c.precondition,
+                "priority": c.priority,
+                "tags": c.tags,
+                "test_type": c.test_type,
+                "steps": [{"step_no": s.step_no, "description": s.description} for s in c.steps],
+                "expected": [
+                    {"expect_no": e.expect_no, "description": e.description}
+                    for e in c.expected
+                ],
             }
             for c in cases
         ],

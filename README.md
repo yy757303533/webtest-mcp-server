@@ -28,6 +28,12 @@
 pip install -e .
 ```
 
+如需读取 `.xls`（老格式）文件，请安装可选依赖：
+
+```bash
+pip install -e ".[xls]"
+```
+
 ## 项目配置
 
 在 `projects/<project_key>/` 下创建：
@@ -102,6 +108,7 @@ PYTHONPATH=src pytest tests/ -v
 ```
 
 项目路径可通过环境变量 `WEBTEST_PROJECTS_DIR` 覆盖。
+结果落盘根目录可通过环境变量 `WEBTEST_ARTIFACTS_DIR` 覆盖（默认写到当前工作目录下的 `artifacts/`）。
 
 ## 打包
 

@@ -36,10 +36,17 @@ def test_save_test_results():
     result = asyncio.run(_run())
     out = json.loads(result)
     assert out["success"] is True
+    assert "run_id" in out
+    assert "run_dir" in out
+    assert "artifacts_root" in out
     assert "result_path" in out
     assert "report_path" in out
+    assert "latest_result_path" in out
+    assert "latest_report_path" in out
     assert out["summary"]["total"] == 2
     assert out["summary"]["passed"] == 1
     assert out["summary"]["failed"] == 1
     assert Path(out["result_path"]).exists()
     assert Path(out["report_path"]).exists()
+    assert Path(out["latest_result_path"]).exists()
+    assert Path(out["latest_report_path"]).exists()

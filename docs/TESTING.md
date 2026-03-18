@@ -94,7 +94,17 @@ python scripts/test_save_results.py
 
 > 需已安装 mcp（`pip install -e .`）
 
-预期：输出 `"success": true`，并生成 `artifacts/demo/result.json`、`artifacts/demo/report.md`。
+预期：输出 `"success": true`，并在项目目录下生成报告：
+
+- `projects/demo/artifacts/demo/result.json`
+- `projects/demo/artifacts/demo/report.md`
+
+同时会生成带 `run_id` 的目录（便于留痕）：
+
+- `projects/demo/artifacts/demo/<run_id>/result.json`
+- `projects/demo/artifacts/demo/<run_id>/report.md`
+
+如需覆盖落盘根目录，可设置环境变量 `WEBTEST_ARTIFACTS_DIR`。
 
 ---
 

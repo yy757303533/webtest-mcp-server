@@ -9,8 +9,10 @@ webtest-mcp-server - MCP 入口
 """
 
 import json
+import os
 from datetime import datetime, timezone
 from pathlib import Path
+from uuid import uuid4
 from typing import Any, Optional
 
 from mcp.server.fastmcp import FastMCP
@@ -28,14 +30,47 @@ from .loader import (
 mcp = FastMCP("webtest_mcp_server")
 
 
+def _is_relative_to(path: Path, base: Path) -> bool:
+    """Py3.10 兼容的 is_relative_to"""
+    try:
+        path.relative_to(base)
+        return True
+    except ValueError:
+        return False
+
+
 def _get_excel_path(project_key: str, excel_path: str) -> Path:
     """解析 Excel 路径：相对则基于项目目录"""
     p = Path(excel_path)
     if p.is_absolute():
-        return p
+        return p.resolve()
     config = load_project_config(project_key)
-    project_dir = Path(config.get("_project_dir", "."))
-    return project_dir / excel_path
+    project_dir = Path(config.get("_project_dir", ".")).resolve()
+    resolved = (project_dir / excel_path).resolve()
+    if not _is_relative_to(resolved, project_dir):
+        raise ValueError(f"非法 excel_path（越界项目目录）: {excel_path}")
+    return resolved
+
+
+def _get_artifacts_root(project: Optional[str] = None) -> Path:
+    """
+    结果落盘根目录优先级：
+    1) WEBTEST_ARTIFACTS_DIR 环境变量（绝对/相对均可）
+    2) 指定 project 时，落到 projects/<project>/artifacts（更贴近用例与配置）
+    3) 兜底：当前工作目录下 artifacts（保持兼容）
+    """
+    env_dir = os.environ.get("WEBTEST_ARTIFACTS_DIR", "").strip()
+    if env_dir:
+        return Path(env_dir).expanduser().resolve()
+    if project:
+        try:
+            config = load_project_config(project)
+            project_dir = Path(config.get("_project_dir", ".")).resolve()
+            return (project_dir / "artifacts").resolve()
+        except Exception:
+            # 若配置异常则继续走兜底
+            pass
+    return (Path.cwd() / "artifacts").resolve()
 
 
 def _case_to_dict(c: ExcelCase) -> dict:
@@ -139,12 +174,14 @@ async def get_excel_cases(
             )
         cases, base_url = _load_and_filter(project, excel_path, tags, module, priorities)
         out = [_case_to_dict(c) for c in cases]
+        resolved_path = str(_get_excel_path(project, excel_path))
         return json.dumps(
             {
                 "success": True,
                 "project": project,
                 "base_url": base_url,
                 "excel_path": str(excel_path),
+                "excel_path_resolved": resolved_path,
                 "count": len(out),
                 "cases": out,
             },
@@ -191,6 +228,7 @@ async def get_grouped_cases(
             project, excel_path, tags=tags, priorities=priorities
         )
         groups = group_cases_by_module(cases)
+        resolved_path = str(_get_excel_path(project, excel_path))
         out = []
         for mod, mod_cases in groups.items():
             out.append(
@@ -209,6 +247,7 @@ async def get_grouped_cases(
                 "project": project,
                 "base_url": base_url,
                 "excel_path": str(excel_path),
+                "excel_path_resolved": resolved_path,
                 "total_cases": len(cases),
                 "total_modules": len(out),
                 "groups": out,
@@ -245,8 +284,12 @@ async def save_test_results(
                 ensure_ascii=False,
                 indent=2,
             )
-        artifacts_dir = Path.cwd() / "artifacts" / project
+        artifacts_root = _get_artifacts_root(project)
+        artifacts_dir = artifacts_root / project
         artifacts_dir.mkdir(parents=True, exist_ok=True)
+        run_id = f"{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}-{uuid4().hex[:8]}"
+        run_dir = artifacts_dir / run_id
+        run_dir.mkdir(parents=True, exist_ok=True)
 
         passed = sum(1 for r in results if r.get("passed", False))
         failed = len(results) - passed
@@ -254,10 +297,11 @@ async def save_test_results(
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "project": project,
             "excel_path": excel_path,
+            "run_id": run_id,
             "summary": {"total": len(results), "passed": passed, "failed": failed},
             "results": results,
         }
-        result_path = artifacts_dir / "result.json"
+        result_path = run_dir / "result.json"
         with open(result_path, "w", encoding="utf-8") as f:
             json.dump(payload, f, ensure_ascii=False, indent=2)
 
@@ -267,6 +311,7 @@ async def save_test_results(
             f"**项目**: {project}",
             f"**时间**: {payload['timestamp']}",
             f"**用例文件**: {excel_path or '-'}",
+            f"**Run ID**: {run_id}",
             "",
             f"**总计**: {len(results)} 条，通过 {passed}，失败 {failed}",
             "",
@@ -278,14 +323,25 @@ async def save_test_results(
             err = r.get("error", "")
             title = str(r.get("title", "")).replace("|", "\\|")
             report_lines.append(f"| {r.get('case_id', '')} | {title} | {status} {err} |")
-        report_path = artifacts_dir / "report.md"
+        report_path = run_dir / "report.md"
         report_path.write_text("\n".join(report_lines), encoding="utf-8")
+
+        # 兼容旧路径：始终覆盖最新结果到 artifacts/<project>/
+        latest_result_path = artifacts_dir / "result.json"
+        latest_report_path = artifacts_dir / "report.md"
+        latest_result_path.write_text(result_path.read_text(encoding="utf-8"), encoding="utf-8")
+        latest_report_path.write_text(report_path.read_text(encoding="utf-8"), encoding="utf-8")
 
         return json.dumps(
             {
                 "success": True,
+                "artifacts_root": str(artifacts_root),
+                "run_id": run_id,
+                "run_dir": str(run_dir),
                 "result_path": str(result_path),
                 "report_path": str(report_path),
+                "latest_result_path": str(latest_result_path),
+                "latest_report_path": str(latest_report_path),
                 "summary": payload["summary"],
             },
             ensure_ascii=False,

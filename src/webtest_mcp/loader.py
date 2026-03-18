@@ -153,6 +153,7 @@ def _get_cell(row: tuple, cols: dict[str, int], key: str) -> Any:
 
 _STEP_PATTERN = re.compile(r"[Ss](\d+)[.、]\s*")
 _EXPECTED_PATTERN = re.compile(r"[Ee](\d+)[.、]\s*")
+_TAG_SPLIT_PATTERN = re.compile(r"[,，;；\s]+")
 
 
 def _parse_multi_steps(text: str) -> list[tuple[int, str]]:
@@ -267,19 +268,55 @@ def load_excel_cases(excel_path: Union[str, Path]) -> List[ExcelCase]:
             tags = str(_get_cell(row, header_cols, "tags") or "").strip()
 
             # 解析单行内的多步骤和多预期（S 和 E 是独立列表）
+            # 兼容“多行自然语言：每行一步”——若无 S 编号，则按出现顺序自动递增 step_no
+            has_step_no = _STEP_PATTERN.search(desc_raw) is not None
             parsed_steps = _parse_multi_steps(desc_raw)
             parsed_expected = _parse_multi_expected(expected_raw)
 
-            steps = [CaseStep(step_no=sn, description=sd) for sn, sd in parsed_steps]
-            expected = [
-                ExpectedResult(expect_no=en, description=ed)
-                for en, ed in sorted(parsed_expected.items())
-                if ed
-            ]
-
             if case_id in cases_map:
-                cases_map[case_id].steps.extend(steps)
-                cases_map[case_id].expected.extend(expected)
+                existing = cases_map[case_id]
+                next_step_no = (max((s.step_no for s in existing.steps), default=0) + 1)
+                next_expect_no = (
+                    max((e.expect_no for e in existing.expected), default=0) + 1
+                )
+            else:
+                existing = None
+                next_step_no = 1
+                next_expect_no = 1
+
+            if not has_step_no and len(parsed_steps) == 1 and parsed_steps[0][0] == 1:
+                steps = [CaseStep(step_no=next_step_no, description=parsed_steps[0][1])]
+            else:
+                steps = [CaseStep(step_no=sn, description=sd) for sn, sd in parsed_steps]
+
+            # 兼容“多行自然语言：每行一个预期且无 E 编号”——按出现顺序自动递增 expect_no
+            if parsed_expected and set(parsed_expected.keys()) == {0}:
+                expected = [
+                    ExpectedResult(expect_no=next_expect_no, description=parsed_expected[0])
+                ]
+            else:
+                expected = [
+                    ExpectedResult(expect_no=en, description=ed)
+                    for en, ed in sorted(parsed_expected.items())
+                    if ed
+                ]
+
+            if existing is not None:
+                existing.steps.extend(steps)
+                existing.expected.extend(expected)
+                # 以首次出现为准；若后续行补充了空字段，则不覆盖
+                if not existing.title and title:
+                    existing.title = title
+                if not existing.module and module:
+                    existing.module = module
+                if not existing.test_type and test_type:
+                    existing.test_type = test_type
+                if not existing.precondition and precondition:
+                    existing.precondition = precondition
+                if not existing.priority and priority:
+                    existing.priority = priority
+                if not existing.tags and tags:
+                    existing.tags = tags
             else:
                 cases_map[case_id] = ExcelCase(
                     case_id=case_id,
@@ -312,7 +349,12 @@ def filter_cases_by_tags(cases: List[ExcelCase], tags: Optional[List[str]]) -> L
     tag_set = set(t.strip().lower() for t in tags if t)
     return [
         c for c in cases
-        if tag_set & set(t.strip().lower() for t in c.tags.split(",") if t.strip())
+        if tag_set
+        & set(
+            t.strip().lower()
+            for t in _TAG_SPLIT_PATTERN.split(c.tags or "")
+            if t.strip()
+        )
     ]
 
 
