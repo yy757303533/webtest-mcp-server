@@ -101,8 +101,14 @@ pip install -e ".[dev]"
 PYTHONPATH=src pytest tests/ -v
 ```
 
-打包前可执行 `sh scripts/clean.sh` 清理 `__pycache__`。  
 项目路径可通过环境变量 `WEBTEST_PROJECTS_DIR` 覆盖。
+
+## 打包
+
+- **PyPI**：`sh scripts/build-dist.sh`（先执行 `clean.sh` 再 `python -m build`，输出在 `dist/`）
+- **源码 zip**：`git archive -o webtest-mcp-server.zip HEAD`  
+  `.gitattributes` 已设置 `export-ignore`，自动排除 `__pycache__`、`.pytest_cache`、`artifacts`
+- 避免双层嵌套：打包时务必在**项目根目录**执行，勿在上层目录对 `webtest-mcp-server` 文件夹整体打 zip
 
 ## Docker
 

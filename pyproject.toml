@@ -44,6 +44,14 @@ packages = ["src/webtest_mcp"]
 
 [tool.hatch.build.targets.sdist]
 packages = ["src/webtest_mcp"]
+exclude = [
+  "**/__pycache__",
+  "**/__pycache__/**",
+  "**/.pytest_cache",
+  "**/.pytest_cache/**",
+  "**/artifacts",
+  "**/artifacts/**",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
