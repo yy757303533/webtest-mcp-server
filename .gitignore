@@ -1,7 +1,6 @@
 # Python
 __pycache__/
-*.py[cod]
-*$py.class
+*.py[cod]\n*$py.class
 *.so
 .Python
 build/
@@ -19,8 +18,12 @@ env/
 .coverage
 htmlcov/
 
-# Artifacts
+# Artifacts（测试执行结果，不提交）
 artifacts/
+**/artifacts/
+
+# 敏感文件（含账号密码，不提交）
+projects/*/project.yaml
 
 # MCP / Cursor（安装时生成，可不提交）
 .cursor/mcp.json

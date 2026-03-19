@@ -1,12 +1,8 @@
 # huudi 项目配置
 base_url: "https://huudi.chintec.net"
 
-# 如需登录，在这里配置 login 段（供自动化执行登录步骤）
+# 登录配置（供 case-executor 自动登录）
 login:
-  url: "https://huudi.chintec.net/createAccount"
-  username: "login.username"
-  password: "login.password"
-  submit: "login.submit"
+  url: "https://huudi.chintec.net/login"
   account: "michellezhao553@gmail.com"
   password_value: "As123456,"
-

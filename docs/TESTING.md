@@ -1,161 +1,89 @@
-# webtest-mcp-server 测试步骤
+# 单元测试说明
 
-项目支持 **Windows、macOS、Linux**。本文档说明如何在本机完成验证，测试通过后可对接你的 Web 项目。
+本文档面向开发者，说明如何在本地运行单元测试来验证代码正确性。
+
+> 如果你是第一次使用本项目，请先阅读 [GETTING_STARTED.md](GETTING_STARTED.md)。
 
 ---
 
-## 一、环境准备
+## 运行单元测试
 
-### 1.1 前置条件
+### 前置
 
-- **Python 3.10 ~ 3.12**（项目要求 `>=3.10`）
-- **pip**（随 Python 安装）
-- 终端：CMD / PowerShell（Windows）或 Terminal（macOS/Linux）
+```bash
+# 安装开发依赖
+pip install -e ".[dev,xls]"
+```
 
-### 1.2 安装项目
+### 设置 PYTHONPATH
 
-**方式一：一键安装**（推荐，自动配置 Skill + MCP）
+每次新开终端都需要执行：
 
 | 平台 | 命令 |
 |------|------|
-| macOS / Linux | `cd webtest-mcp-server && sh install.sh` |
-| Windows PowerShell | `cd webtest-mcp-server; .\install.ps1` |
+| Windows CMD | `set PYTHONPATH=src` |
+| Windows PowerShell | `$env:PYTHONPATH = "src"` |
+| macOS / Linux | `export PYTHONPATH=src` |
 
-**方式二：手动安装**
-
-```bash
-cd webtest-mcp-server
-pip install -e .
-```
-
-> 手动安装后需自行配置 Cursor MCP 和 Skill，参见 README。
-
----
-
-## 二、设置 PYTHONPATH
-
-每次新开终端都需要执行，或保持该终端不关。
-
-| 平台 | 命令 |
-|------|------|
-| **Windows CMD** | `set PYTHONPATH=src` |
-| **Windows PowerShell** | `$env:PYTHONPATH = "src"` |
-| **macOS / Linux (bash/zsh)** | `export PYTHONPATH=src` |
-
----
-
-## 三、测试步骤
-
-### 步骤 1：创建示例 Excel
+### 运行全部测试
 
 ```bash
-python scripts/create_demo_excel.py
-```
-
-预期：`已创建: projects/demo/cases.xlsx`（Windows 下可能显示 `projects\demo\cases.xlsx`）
-
-### 步骤 2：单元测试（config、loader）
-
-```bash
-python -m pytest tests/test_config.py tests/test_loader.py -v
-```
-
-预期：`2 passed` 或 `4 passed`（视 cases.xlsx 是否存在）
-
-### 步骤 3：列出用例
-
-```bash
-python scripts/list_cases.py demo cases.xlsx
-```
-
-预期：输出 JSON，含 `project`、`base_url`、`cases` 列表。
-
-### 步骤 4：启动 MCP 服务
-
-```bash
-webtest-mcp
-```
-
-或：
-
-```bash
-python -m webtest_mcp.server
-```
-
-预期：服务启动，等待 MCP 客户端连接（无报错即成功）。
-
-> 按 `Ctrl+C`（所有平台）停止服务。
-
-### 步骤 5：保存结果接口（可选）
-
-```bash
-python scripts/test_save_results.py
-```
-
-> 需已安装 mcp（`pip install -e .`）
-
-预期：输出 `"success": true`，并在项目目录下生成报告：
-
-- `projects/demo/artifacts/demo/result.json`
-- `projects/demo/artifacts/demo/report.md`
-
-同时会生成带 `run_id` 的目录（便于留痕）：
-
-- `projects/demo/artifacts/demo/<run_id>/result.json`
-- `projects/demo/artifacts/demo/<run_id>/report.md`
-
-如需覆盖落盘根目录，可设置环境变量 `WEBTEST_ARTIFACTS_DIR`。
-
----
-
-## 四、全量测试
-
-先设置 PYTHONPATH，再执行：
-
-```bash
-python -m pytest tests/ -v
-```
-
-**macOS / Linux：**
-```bash
-export PYTHONPATH=src
-python -m pytest tests/ -v
-```
-
-**Windows CMD：**
-```cmd
-set PYTHONPATH=src
-python -m pytest tests/ -v
+PYTHONPATH=src pytest tests/ -v
 ```
 
 **Windows PowerShell：**
 ```powershell
 $env:PYTHONPATH = "src"
-python -m pytest tests/ -v
+pytest tests/ -v
 ```
 
-预期：`test_config`、`test_loader` 通过；`test_save_test_results` 在已安装 `mcp` 时通过，否则跳过。
+---
+
+## 测试文件说明
+
+| 文件 | 覆盖范围 |
+|------|----------|
+| `tests/test_config.py` | 项目配置加载（list_projects、load_project_config） |
+| `tests/test_loader.py` | Excel 读取（load_excel_cases、filter_cases_by_tags） |
+| `tests/test_server.py` | MCP 工具（save_test_results、generate_cases、list/grouped/excel） |
+
+### test_server.py 覆盖的测试用例
+
+- `test_save_basic` — PASS/FAIL/SKIP 统计正确，文件全部生成
+- `test_save_with_screenshot` — 截图以 base64 嵌入 HTML
+- `test_save_screenshot_missing_file` — 截图文件不存在时不报错
+- `test_save_cumulative` — 分批两次调用，累计报告包含全部结果
+- `test_save_invalid_project` — 不存在的项目返回 success=False
+- `test_generate_cases_basic` — 写入 Excel，loader 能读回
+- `test_generate_cases_skip_incomplete` — 缺必填字段的用例被跳过
+- `test_generate_cases_auto_filename` — 自动生成带时间戳的文件名
+- `test_generate_cases_path_traversal` — 路径穿越攻击被拦截
+- `test_list_projects` — 列出项目包含 demo
+- `test_get_grouped_cases` — 分组返回正确
+- `test_get_excel_cases_empty_tag_filter` — 不存在的标签返回空列表
 
 ---
 
-## 五、对接你的 Web 项目
+## 预期结果
 
-测试通过后，按以下步骤接入：
+```
+tests/test_config.py::test_list_projects       PASSED
+tests/test_config.py::test_load_project_config PASSED
+tests/test_loader.py::test_load_excel_cases    PASSED
+tests/test_loader.py::test_filter_by_tags      PASSED
+tests/test_server.py::test_save_basic          PASSED
+tests/test_server.py::test_save_with_screenshot PASSED
+...（共 16 个测试）
+```
 
-1. **新建项目目录**：`projects/<你的项目名>/`
-2. **创建 project.yaml**（含 `base_url`）
-3. **准备 Excel 用例**，放入 `projects/<你的项目名>/xxx.xlsx`
-4. **配置 Cursor MCP**：webtest-mcp + playwright-mcp
-5. **在 Cursor 中执行**：对 AI 说「执行 `<项目名>` 的 `xxx.xlsx`」
+`test_server.py` 中的测试需要 `mcp` 包，已通过 `pip install -e .` 安装则全部通过；否则标记为 `SKIP`。
 
 ---
 
-## 六、常见问题
+## 创建示例数据
 
-| 问题 | 处理 |
-|------|------|
-| `ModuleNotFoundError: No module named 'mcp'` | 执行 `pip install -e .` |
-| `FileNotFoundError: Excel 文件不存在` | 先运行 `python scripts/create_demo_excel.py` |
-| `项目 demo 不存在` | 确保 `projects/demo/project.yaml` 存在 |
-| Windows CMD 中 `python` 不存在 | 使用 `py -3` 或配置 Python 到 PATH |
-| macOS/Linux 中 `python` 指向 2.x | 使用 `python3` |
+`projects/demo/` 的 xlsx 文件用于 test_loader 测试，如不存在可生成：
+
+```bash
+python scripts/create_demo_excel.py
+```

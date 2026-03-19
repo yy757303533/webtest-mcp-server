@@ -1,125 +1,148 @@
 # webtest-mcp-server
 
-读取 Excel 中的自然语言手工测试用例，供 AI Agent 配合 [@playwright/mcp](https://github.com/microsoft/playwright-mcp) 执行。
+从需求文档到自动化测试的完整流水线：**需求文档 → 生成用例 → 执行测试 → HTML 报告**。
 
-## 功能
+AI 作为决策者，读取自然语言用例后，实时调用 `@playwright/mcp` 操作浏览器执行测试。
 
-- **list_projects_tool**：列出已配置项目
-- **get_excel_cases**：读取 Excel 自然语言用例，返回供 AI 消费的 JSON
-- **save_test_results**：保存执行结果到 `artifacts/<project>/result.json` 和 `report.md`
+**→ 新手从这里开始：[docs/GETTING_STARTED.md](docs/GETTING_STARTED.md)**
 
-执行由 AI + playwright-mcp 完成；AI 执行完成后调用 save_test_results 持久化结果。
+---
+
+## 架构
+
+```
+双 MCP 架构
+  webtest-mcp     ← Python，读写 Excel、保存结果
+  @playwright/mcp ← Node.js，操作浏览器
+
+3 个 Skill
+  web-test-runner   ← 总入口，判断意图，路由到子 Skill
+  case-generator    ← 子 Skill A：需求文档 → Excel 用例
+  case-executor     ← 子 Skill B：Excel 用例 → 执行 → HTML 报告
+```
+
+---
 
 ## 安装
 
-**一键安装**（Skill + MCP 全自动，无需手动配置）：
+**一键安装**（Windows/macOS/Linux 均支持）：
 
 | 平台 | 命令 |
 |------|------|
 | macOS / Linux | `sh install.sh` |
 | Windows (PowerShell) | `.\install.ps1` |
 
-安装脚本会：1）`pip install -e .` 2）复制 Skill 到 `~/.cursor/skills`、`~/.claude/skills` 3）将 webtest + playwright 合并到 `~/.cursor/mcp.json`、`~/.mcp.json`（不覆盖已有 MCP）4）创建项目级 `.cursor/mcp.json`。  
-**Skill 和 MCP 自动生效，无需手动配置。** 重启 Cursor/Claude Code 即可。
+安装脚本完成：
+1. `pip install -e .`（含 xlrd 可选依赖）
+2. 部署全部 3 个 Skill 到 `~/.cursor/skills` 和 `~/.claude/skills`
+3. 合并 webtest + playwright MCP 到全局配置（不覆盖已有项）
+4. 创建项目级 `.cursor/mcp.json`
 
-**手动安装**：
-
-```bash
-pip install -e .
-```
-
-如需读取 `.xls`（老格式）文件，请安装可选依赖：
+如需读取 `.xls` 老格式文件：
 
 ```bash
 pip install -e ".[xls]"
 ```
 
+---
+
 ## 项目配置
 
-在 `projects/<project_key>/` 下创建：
+每个项目在 `projects/<key>/` 下：
 
-- **project.yaml**：`base_url` 等
-- Excel 用例文件（支持「步骤描述」「期望结果」或「action」「target」「value」列）
+```
+projects/huudi/
+  project.yaml         ← 配置（base_url、login，不要提交到 git）
+  project.yaml.example ← 模板（可提交）
+  huudi_cases_v1.xlsx  ← 用例文件（AI 生成或手工维护）
+  artifacts/           ← 执行结果（自动生成，不提交）
+    huudi/
+      report.html      ← 最新累计报告
+      result.json      ← 最新累计数据
+      20260319T.../    ← 每次运行的独立存档
+```
 
-### Excel 格式
+`project.yaml` 示例：
 
-**自然语言格式**（推荐）：
+```yaml
+base_url: "https://huudi.chintec.net"
+login:
+  url: "https://huudi.chintec.net/login"
+  account: "user@example.com"
+  password_value: "your-password"
+```
 
-| 用例ID | 标题 | 步骤描述 | 期望结果 |
-|--------|------|----------|----------|
-| TC001 | 登录 | 输入 admin，密码 123456，点击登录 | 跳转首页 |
-| TC002 | 登录失败 | 输入错误密码，点击登录 | 提示密码错误 |
-
-**结构化格式**（兼容）：
-
-| 用例ID | 标题 | action | target | value |
-|--------|------|--------|--------|-------|
-| TC001 | 登录 | fill | 用户名 | admin |
-| TC001 | 登录 | click | 登录按钮 | |
+---
 
 ## 使用
 
-### 1. 启动 MCP 服务
+### 流程 A：需求文档 → 生成用例
 
-```bash
-webtest-mcp
-# 或
-python -m webtest_mcp.server
+对 AI 说：
+
+```
+根据 huudi_specs_EN.md 给 huudi 项目生成测试用例
 ```
 
-### 2. 配置双 MCP（Cursor / Claude Code）
+AI 会分析需求文档，调用 `generate_cases` 写入 Excel，输出模块分布摘要。
 
-运行 `install.sh` 或 `install.ps1` 后，会自动创建 `.cursor/mcp.json`，包含 webtest-mcp 和 playwright-mcp。  
-在 Cursor 中打开本项目作为工作区即可加载。
+### 流程 B：执行已有用例
 
-**手动配置**：Settings → MCP → 添加 webtest（command: `webtest-mcp`）和 playwright（command: `npx`, args: `@playwright/mcp@latest`）
+```
+执行 huudi 项目的 huudi_cases_v1.xlsx
+```
 
-### 3. Skill（Phase 2）
+AI 按模块分批执行，每模块完成后调用 `save_test_results` 保存结果，最终在 `artifacts/huudi/report.html` 生成可交互 HTML 报告（含进度条、筛选器、FAIL 截图）。
 
-项目已包含 **web-test-runner** Skill：
+### 完整流水线（A + B）
 
-- Cursor：`.cursor/skills/web-test-runner/SKILL.md`
-- Claude Code：`.claude/skills/web-test-runner/SKILL.md`
+```
+从需求文档到测试结果，给 huudi 项目全流程跑一遍
+```
 
-当用户说「执行 demo 的登录用例」「跑 Excel 测试」时，AI 会命中 Skill，按流程执行：
+---
 
-1. 调用 `get_excel_cases` 获取用例
-2. 调用 playwright-mcp 的 browser_navigate、browser_snapshot、browser_click、browser_type 等操作
-3. 汇总 PASS/FAIL 报告
+## MCP 工具
+
+| 工具 | 用途 |
+|------|------|
+| `list_projects_tool` | 列出已配置项目 |
+| `get_grouped_cases` | 按模块分组查看用例概要 |
+| `get_excel_cases` | 获取指定模块完整用例（含过滤） |
+| `generate_cases` | 需求文档分析结果 → 写入 Excel |
+| `save_test_results` | 保存结果，生成 JSON + MD + HTML 报告，支持截图嵌入，多次调用自动累计 |
+
+---
+
+## Excel 格式
+
+**推荐列头**（中文）：
+
+| 用例编号 | 模块 | 测试类型 | 用例说明（名称）| 预置条件 | 测试步骤 | 预期结果 | 等级 | 场景标签 |
+|----------|------|----------|----------------|----------|----------|----------|------|----------|
+
+**步骤格式**：`S1. 点击登录按钮\nS2. 输入邮箱`
+
+**预期格式**：`E1. 跳转到首页\nE2. 显示用户名`
+
+支持 `.xlsx` 和 `.xls`（`.xls` 需安装 `[xls]` 可选依赖）。
+
+---
 
 ## 本地验证
 
 ```bash
-# 创建示例 Excel
-python scripts/create_demo_excel.py
+# 语法检查
+python3 -c "import ast; ast.parse(open('src/webtest_mcp/server.py').read()); print('OK')"
 
-# 列出用例
-python scripts/list_cases.py demo cases.xlsx
-```
-
-**PYTHONPATH**：Windows CMD `set PYTHONPATH=src`；PowerShell `$env:PYTHONPATH="src"`；macOS/Linux `export PYTHONPATH=src`。  
-完整测试步骤见 [docs/TESTING.md](docs/TESTING.md)。项目支持 **Windows、macOS、Linux**。
-
-## 测试
-
-```bash
-pip install -e ".[dev]"
+# 单元测试（需 pip install -e ".[dev]"）
 PYTHONPATH=src pytest tests/ -v
 ```
 
-项目路径可通过环境变量 `WEBTEST_PROJECTS_DIR` 覆盖。
-结果落盘根目录可通过环境变量 `WEBTEST_ARTIFACTS_DIR` 覆盖（默认写到当前工作目录下的 `artifacts/`）。
+---
 
-## 打包
+## 安全注意
 
-- **PyPI**：`sh scripts/build-dist.sh`（先执行 `clean.sh` 再 `python -m build`，输出在 `dist/`）
-- **源码 zip**：`git archive -o webtest-mcp-server.zip HEAD`  
-  `.gitattributes` 已设置 `export-ignore`，自动排除 `__pycache__`、`.pytest_cache`、`artifacts`
-- 避免双层嵌套：打包时务必在**项目根目录**执行，勿在上层目录对 `webtest-mcp-server` 文件夹整体打 zip
-
-## Docker
-
-```bash
-docker build -t webtest-mcp-server .
-docker run --rm webtest-mcp-server
-```
+- `project.yaml` 含账号密码，**不要提交到 git**（已在 `.gitignore` 中忽略）
+- 使用 `project.yaml.example` 作为模板提交
+- `artifacts/` 目录含测试结果，也已忽略

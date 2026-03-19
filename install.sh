@@ -38,10 +38,12 @@ echo "  ok"
 # 2. 安装 Skill（用户级，所有项目可用，无需手动配置）
 echo "[2/4] 安装 Skill（自动部署）..."
 mkdir -p "$HOME/.cursor/skills" "$HOME/.claude/skills"
-cp -r "$PROJECT_ROOT/.cursor/skills/web-test-runner" "$HOME/.cursor/skills/"
-cp -r "$PROJECT_ROOT/.claude/skills/web-test-runner" "$HOME/.claude/skills/"
-echo "  Cursor: ~/.cursor/skills/web-test-runner"
-echo "  Claude: ~/.claude/skills/web-test-runner"
+for skill in web-test-runner case-generator case-executor; do
+  cp -r "$PROJECT_ROOT/.cursor/skills/$skill" "$HOME/.cursor/skills/"
+  cp -r "$PROJECT_ROOT/.claude/skills/$skill" "$HOME/.claude/skills/"
+  echo "  Cursor: ~/.cursor/skills/$skill"
+  echo "  Claude: ~/.claude/skills/$skill"
+done
 
 # 3. 合并 MCP 到全局配置（保留已有，仅添加 webtest + playwright）
 echo "[3/4] 注册 MCP（合并到全局配置）..."

@@ -154,6 +154,19 @@ def _get_cell(row: tuple, cols: dict[str, int], key: str) -> Any:
 _STEP_PATTERN = re.compile(r"[Ss](\d+)[.、]\s*")
 _EXPECTED_PATTERN = re.compile(r"[Ee](\d+)[.、]\s*")
 _TAG_SPLIT_PATTERN = re.compile(r"[,，;；\s]+")
+# 乱码检测：含 null bytes 或大量连续不可打印字节则视为损坏
+_GARBAGE_PATTERN = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f]")
+
+
+def _clean_cell(s: str) -> str:
+    """清理单元格文本：去除 null bytes 和不可打印控制字符，保留换行符。"""
+    if not s:
+        return s
+    cleaned = _GARBAGE_PATTERN.sub("", s)
+    # 若清理后内容减少超过 30%，说明原始内容大概率是乱码，返回空串
+    if len(s) > 10 and len(cleaned) < len(s) * 0.7:
+        return ""
+    return cleaned.strip()
 
 
 def _parse_multi_steps(text: str) -> list[tuple[int, str]]:
@@ -244,8 +257,8 @@ def load_excel_cases(excel_path: Union[str, Path]) -> List[ExcelCase]:
             ):
                 continue
 
-            desc_raw = str(_get_cell(row, header_cols, "description") or "").strip()
-            expected_raw = str(_get_cell(row, header_cols, "expected") or "").strip()
+            desc_raw = _clean_cell(str(_get_cell(row, header_cols, "description") or ""))
+            expected_raw = _clean_cell(str(_get_cell(row, header_cols, "expected") or ""))
 
             # DSL 格式 fallback
             if not desc_raw and has_action:
@@ -260,10 +273,10 @@ def load_excel_cases(excel_path: Union[str, Path]) -> List[ExcelCase]:
                 continue
 
             case_id = str(_get_cell(row, header_cols, "case_id") or "").strip() or "default"
-            title = str(_get_cell(row, header_cols, "title") or "").strip()
+            title = _clean_cell(str(_get_cell(row, header_cols, "title") or ""))
             module = str(_get_cell(row, header_cols, "module") or "").strip()
             test_type = str(_get_cell(row, header_cols, "test_type") or "").strip()
-            precondition = str(_get_cell(row, header_cols, "precondition") or "").strip()
+            precondition = _clean_cell(str(_get_cell(row, header_cols, "precondition") or ""))
             priority = str(_get_cell(row, header_cols, "priority") or "").strip()
             tags = str(_get_cell(row, header_cols, "tags") or "").strip()
 

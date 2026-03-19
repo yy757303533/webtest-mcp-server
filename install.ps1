@@ -38,10 +38,12 @@ $CursorSkills = Join-Path $env:USERPROFILE ".cursor\skills"
 $ClaudeSkills = Join-Path $env:USERPROFILE ".claude\skills"
 New-Item -ItemType Directory -Force -Path $CursorSkills | Out-Null
 New-Item -ItemType Directory -Force -Path $ClaudeSkills | Out-Null
-Copy-Item -Path "$ProjectRoot\.cursor\skills\web-test-runner" -Destination $CursorSkills -Recurse -Force
-Copy-Item -Path "$ProjectRoot\.claude\skills\web-test-runner" -Destination $ClaudeSkills -Recurse -Force
-Write-Host "  Cursor: ~/.cursor/skills/web-test-runner"
-Write-Host "  Claude: ~/.claude/skills/web-test-runner"
+foreach ($skill in @("web-test-runner", "case-generator", "case-executor")) {
+    Copy-Item -Path "$ProjectRoot\.cursor\skills\$skill" -Destination $CursorSkills -Recurse -Force
+    Copy-Item -Path "$ProjectRoot\.claude\skills\$skill" -Destination $ClaudeSkills -Recurse -Force
+    Write-Host "  Cursor: ~/.cursor/skills/$skill"
+    Write-Host "  Claude: ~/.claude/skills/$skill"
+}
 
 # 3. 合并 MCP 到全局配置
 Write-Host "[3/4] 注册 MCP（合并到全局配置）..." -ForegroundColor Yellow
