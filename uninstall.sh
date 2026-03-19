@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 # webtest-mcp-server 卸载（macOS / Linux）
-# 移除 Skill，并从 MCP 配置中删除 webtest/playwright 条目
+# 仅适配 Claude Code
 
 set -e
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -10,22 +10,32 @@ command -v python3 >/dev/null 2>&1 || PYTHON=python
 
 echo ""
 echo "  webtest-mcp-server 卸载"
-echo "  将移除: Skill、~/.cursor/mcp.json 和 ~/.mcp.json 中的 webtest/playwright"
+echo "  将移除:"
+echo "    • ~/.claude/skills 中的 3 个 Skill"
+echo "    • ~/.claude.json 中的 webtest/playwright"
 echo ""
 read -r -p "  继续? [y/N] " CONFIRM
 case "$CONFIRM" in [Yy]*) ;; *) echo "已取消"; exit 0 ;; esac
 
-# 移除 Skill
-for d in "$HOME/.cursor/skills/web-test-runner" "$HOME/.claude/skills/web-test-runner"; do
+# 移除 3 个 Skill
+for skill in web-test-runner case-generator case-executor; do
+  d="$HOME/.claude/skills/$skill"
   [ -d "$d" ] && rm -rf "$d" && echo "  已移除 $d"
 done
 
-# 从 MCP 配置中移除 webtest、playwright
-for f in "$HOME/.cursor/mcp.json" "$HOME/.mcp.json"; do
-  [ -f "$f" ] && "$PYTHON" "$PROJECT_ROOT/scripts/remove_mcp_config.py" "$f" && echo "  已从 $f 移除 webtest/playwright" || true
-done
+# 从 ~/.claude.json 移除 webtest、playwright
+f="$HOME/.claude.json"
+[ -f "$f" ] && \
+  "$PYTHON" "$PROJECT_ROOT/scripts/remove_mcp_config.py" "$f" && \
+  echo "  已从 $f 移除 webtest/playwright" || true
+
+# claude cli 注销
+if command -v claude >/dev/null 2>&1; then
+  claude mcp remove webtest    --scope user 2>/dev/null && echo "  claude mcp remove webtest: ok"    || true
+  claude mcp remove playwright --scope user 2>/dev/null && echo "  claude mcp remove playwright: ok" || true
+fi
 
 echo ""
-echo "卸载完成。重启 Cursor/Claude Code 生效。"
+echo "卸载完成。重启 Claude Code 生效。"
 echo "Python 包需手动卸载: pip uninstall webtest-mcp-server"
 echo ""
