@@ -25,7 +25,7 @@
 |------|----------|----------|------|
 | Python | 3.10 或以上 | `python --version` | [python.org](https://www.python.org/downloads/) |
 | Node.js | 18 或以上 | `node --version` | [nodejs.org](https://nodejs.org/) |
-| Cursor 或 Claude Code | 最新版 | — | [cursor.com](https://cursor.com) / [claude.ai/code](https://claude.ai/code) |
+| Claude Code | 最新版 | — | [claude.ai/code](https://claude.ai/code) |
 
 ### Python 版本检查
 
@@ -85,9 +85,8 @@ sh install.sh
 
 安装脚本会自动完成以下操作：
 1. 安装 Python 依赖（`mcp`、`openpyxl`、`pyyaml`）
-2. 部署 3 个 Skill 到 `~/.cursor/skills` 和 `~/.claude/skills`
-3. 注册 `webtest-mcp` 和 `@playwright/mcp` 到 Cursor / Claude Code 全局配置
-4. 创建项目级 `.cursor/mcp.json`
+2. 部署 3 个 Skill 到 `~/.claude/skills`
+3. 注册 `webtest-mcp` 和 `@playwright/mcp` 到 Claude Code 全局配置
 
 **如果需要读取 `.xls` 格式的旧版 Excel（如从其他测试工具导出的用例）：**
 ```bash
@@ -100,13 +99,13 @@ pip install -e ".[xls]"
 
 ### 第三步：重启 IDE
 
-安装完成后，**必须重启** Cursor 或 Claude Code，MCP 配置才会生效。
+安装完成后，**必须重启** Claude Code，MCP 配置才会生效。
 
 ### 第四步：验证安装
 
-重启后，在 Claude Code / Cursor 的设置页面确认 MCP 工具已加载：
+重启后，在 Claude Code 的设置页面确认 MCP 工具已加载：
 
-- 打开 Settings → MCP（或 Cursor 左下角齿轮 → MCP）
+- 打开 Settings → MCP
 - 应看到 `webtest` 和 `playwright` 两个 MCP 服务
 - 状态应为绿色（已连接）
 
@@ -177,7 +176,7 @@ Excel 支持的列头（中英文均可）：
 
 ## 4. 怎么提问（Prompt 指南）
 
-打开 Cursor 或 Claude Code，直接用自然语言描述你要做的事。
+打开 Claude Code，直接用自然语言描述你要做的事。
 
 ### 场景 A：从需求文档生成用例
 
@@ -381,9 +380,7 @@ pip install -e .
 
 **Q：安装完重启 IDE 后 MCP 还是显示未连接**
 
-检查 MCP 配置文件是否存在：
-- Cursor：`~/.cursor/mcp.json`
-- Claude Code：`~/.mcp.json`
+检查 MCP 配置文件是否存在：`~/.claude.json`
 
 打开文件确认包含 `webtest` 和 `playwright` 两项，然后再次重启 IDE。
 

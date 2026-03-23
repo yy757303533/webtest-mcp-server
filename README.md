@@ -34,9 +34,8 @@ AI 作为决策者，读取自然语言用例后，实时调用 `@playwright/mcp
 
 安装脚本完成：
 1. `pip install -e .`（含 xlrd 可选依赖）
-2. 部署全部 3 个 Skill 到 `~/.cursor/skills` 和 `~/.claude/skills`
-3. 合并 webtest + playwright MCP 到全局配置（不覆盖已有项）
-4. 创建项目级 `.cursor/mcp.json`
+2. 部署全部 3 个 Skill 到 `~/.claude/skills`
+3. 合并 webtest + playwright MCP 到 Claude Code 全局配置（不覆盖已有项）
 
 如需读取 `.xls` 老格式文件：
 
